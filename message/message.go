@@ -20,7 +20,7 @@ type Message struct {
 }
 
 //Broadcast message or Send message to particular process
-func (msg *Message) Send(to int) interface{} {
+func (msg *Message) Send(to int, isBroadcast bool) interface{} {
 	client, err := rpc.DialHTTP("tcp", fmt.Sprintf(":%d", to))
 	if err != nil {
 		log.Fatal("dialing:", err)
@@ -41,16 +41,33 @@ func (msg *Message) Send(to int) interface{} {
 	var reply int
 	switch msg.MessageType {
 	case REQUEST:
-		err = client.Call("Node.Request", msg, &reply)
+		if isBroadcast {
+			err = client.Call("Server.Request", msg, &reply)
+		} else {
+			err = client.Call("Node.Request", msg, &reply)
+		}
 		if err != nil {
-			log.Fatal("node request send error:", err)
+			log.Fatal("request send error:", err)
 		}
 	case REPLY:
-
+		err = client.Call("Node.Reply", msg, &reply)
+		if err != nil {
+			log.Fatal("reply send error:", err)
+		}
 	case RELEASE:
-
+		if isBroadcast {
+			err = client.Call("Server.Release", msg, &reply)
+		} else {
+			err = client.Call("Node.Release", msg, &reply)
+		}
+		if err != nil {
+			log.Fatal("release send error:", err)
+		}
 	case NETWORK_SIZE:
-
+		err = client.Call("Node.NetworkSize", msg, &reply)
+		if err != nil {
+			log.Fatal("network_size send error:", err)
+		}
 	}
 
 	return reply

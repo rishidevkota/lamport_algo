@@ -23,19 +23,24 @@ type Server int
 
 func broadcast(msg message.Message) {
 	for _, _port := range NodePorts {
-		msg.Send(_port)
+		if msg.SenderID != _port {
+			msg.Send(_port, false)
+		}
 	}
+	fmt.Printf("broadcast %d : %v\n", msg.MessageType, NodePorts)
 }
 
 func (s *Server) Request(msg *message.Message, reply *int) error {
-
+	broadcast(*msg)
+	return nil
 }
 
-func (s *Server) Reply(msg *message.Message, reply *int) error {
-
+func (s *Server) Release(msg *message.Message, reply *int) error {
+	broadcast(*msg)
+	return nil
 }
 
-func (s *Server) RegisterNode(port *int, reply *int) error {
+func (s *Server) RegisterNode(port *int, network *message.Network) error {
 	var isPortUsed bool
 	for _, _port := range NodePorts {
 		if _port == *port {
@@ -43,17 +48,20 @@ func (s *Server) RegisterNode(port *int, reply *int) error {
 		}
 	}
 	if isPortUsed {
-		*reply = NodePorts[len(NodePorts)-1] + 1
+		//*reply = NodePorts[len(NodePorts)-1] + 1
+		network.Port = NodePorts[len(NodePorts)-1] + 1
 	} else {
-		*reply = *port
+		//*reply = *port
+		network.Port = *port
 	}
 	msg := message.Message{
-		MessageType: message.REQUEST,
+		MessageType: message.NETWORK_SIZE,
 		SenderID:    PORT,
 	}
 	broadcast(msg)
 
-	NodePorts = append(NodePorts, *reply)
+	NodePorts = append(NodePorts, network.Port)
+	network.Size = len(NodePorts)
 
 	return nil
 }
